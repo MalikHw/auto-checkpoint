@@ -22,52 +22,28 @@ class $modify(AutoCheckpointPlayLayer, PlayLayer) {
     }
 
     void update(float dt) {
-        PlayLayer::update(dt);
+		PlayLayer::update(dt);
 
-        // Check if auto-checkpoint is enabled
-        if (!Mod::get()->getSettingValue<bool>("enabled")) {
-            return;
-        }
+		if (!Mod::get()->getSettingValue<bool>("enabled")) return;
 
-        // Check if we should only work in practice mode
-        bool practiceOnly = Mod::get()->getSettingValue<bool>("practice-mode-only");
-        if (practiceOnly && !m_isPracticeMode) {
-            return;
-        }
+		// Correct practice mode check
+		bool practiceOnly = Mod::get()->getSettingValue<bool>("practice-mode-only");
+		if (practiceOnly && !m_isPracticeMode) return;
 
-        // Don't place checkpoints if the level hasn't started yet
-        if (!m_hasStartedLevel) {
-            return;
-        }
+		if (!m_hasStartedLevel || m_player1->m_isDead) return;
 
-        // Don't place checkpoints if the player is dead
-        if (m_player1->m_isDead || (m_player2 && m_player2->m_isDead)) {
-            return;
-        }
+		m_fields->m_timeSinceLastCheckpoint += dt;
 
-        // Accumulate time
-        m_fields->m_timeSinceLastCheckpoint += dt;
+		double interval = Mod::get()->getSettingValue<double>("interval");
 
-        // Get the interval from settings
-        float interval = Mod::get()->getSettingValue<double>("interval");
-
-        // Check if it's time to place a checkpoint
-        if (m_fields->m_timeSinceLastCheckpoint >= interval) {
-            // Only place checkpoint if we're in practice mode (can't place checkpoints in normal mode)
-            if (m_isPracticeMode) {
-                // Place the checkpoint using the game's built-in function
-                this->addToSection(m_player1->m_position.x);
-                
-                // Reset timer
-                m_fields->m_timeSinceLastCheckpoint = 0.0f;
-                
-                log::debug("Auto-placed checkpoint at {:.2f}s", m_gameState.m_levelTime);
-            } else {
-                // If not in practice mode, just reset timer to avoid spam
-                m_fields->m_timeSinceLastCheckpoint = 0.0f;
-            }
-        }
-    }
+		if (m_fields->m_timeSinceLastCheckpoint >= static_cast<float>(interval)) {
+			// createCheckpoint() only works if m_isPracticeMode is true
+			if (m_isPracticeMode) {
+				this->createCheckpoint();
+				m_fields->m_timeSinceLastCheckpoint = 0.0f;
+			}
+		}
+	}
 
     void resetLevel() {
         PlayLayer::resetLevel();
