@@ -22,27 +22,36 @@ class $modify(AutoCheckpointPlayLayer, PlayLayer) {
     }
 
     void update(float dt) {
-		PlayLayer::update(dt);
+    	PlayLayer::update(dt);
 
-		if (!Mod::get()->getSettingValue<bool>("enabled")) return;
+    	// 1. Check if enabled
+    	if (!Mod::get()->getSettingValue<bool>("enabled")) return;
 
-		// Correct practice mode check
-		bool practiceOnly = Mod::get()->getSettingValue<bool>("practice-mode-only");
-		if (practiceOnly && !m_isPracticeMode) return;
+    	// 2. Check practice mode requirement
+    	bool practiceOnly = Mod::get()->getSettingValue<bool>("practice-mode-only");
+    	if (practiceOnly && !m_isPracticeMode) return;
 
-		if (!m_hasStartedLevel || m_player1->m_isDead) return;
+    	// 3. Safety checks: Ensure player exists, isn't dead, and game isn't paused
+    	// We removed m_hasStartedLevel because it doesn't exist.
+    	if (!m_player1 || m_player1->m_isDead || m_isPaused) return;
 
-		m_fields->m_timeSinceLastCheckpoint += dt;
+    	// 4. Logic
+    	m_fields->m_timeSinceLastCheckpoint += dt;
 
-		double interval = Mod::get()->getSettingValue<double>("interval");
+    	// Use double to match your mod.json float/double type
+    	double interval = Mod::get()->getSettingValue<double>("interval");
 
-		if (m_fields->m_timeSinceLastCheckpoint >= static_cast<float>(interval)) {
-			// createCheckpoint() only works if m_isPracticeMode is true
-			if (m_isPracticeMode) {
-				this->createCheckpoint();
-				m_fields->m_timeSinceLastCheckpoint = 0.0f;
-			}
-		}
+    	if (m_fields->m_timeSinceLastCheckpoint >= static_cast<float>(interval)) {
+        	if (m_isPracticeMode) {
+            	this->createCheckpoint();
+            	m_fields->m_timeSinceLastCheckpoint = 0.0f;
+            
+        	    // Using fmt-style logging which is standard in Geode
+        	    log::debug("Auto-placed checkpoint at {}", m_levelTime);
+        	} else {
+        	    m_fields->m_timeSinceLastCheckpoint = 0.0f;
+        	}
+    	}
 	}
 
     void resetLevel() {
